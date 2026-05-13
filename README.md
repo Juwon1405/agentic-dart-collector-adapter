@@ -3,6 +3,7 @@
 [![tests](https://github.com/Juwon1405/agentic-dart-collector-adapter/actions/workflows/tests.yml/badge.svg)](https://github.com/Juwon1405/agentic-dart-collector-adapter/actions/workflows/tests.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Phase](https://img.shields.io/badge/phase-1.3%20%C2%B7%20Agentic--DART%20roadmap-FF8B00)](https://github.com/Juwon1405/agentic-dart#phase-1-rollout-roadmap)
 [![Companion](https://img.shields.io/badge/companion-Agentic--DART-DD2C00?logo=github)](https://github.com/Juwon1405/agentic-dart)
 
 > **A thin Python layer that turns Velociraptor offline-collector output into the `evidence_root` layout expected by [Agentic-DART](https://github.com/Juwon1405/agentic-dart).**
@@ -11,9 +12,30 @@
 
 ---
 
+## Architecture
+
+![architecture](docs/img/arch.png)
+
+The adapter installs **once** on the analysis server. It is **not** installed on incident hosts. Each incident host receives a Velociraptor agent binary for its OS / arch (Windows / Linux / macOS), runs it once to produce `evidence.zip`, and ships the ZIP back. The adapter then performs the layout translation that Agentic-DART expects.
+
+---
+
+## Position in the Agentic-DART roadmap
+
+This repository is **Phase 1.3** of the [Agentic-DART rollout roadmap](https://github.com/Juwon1405/agentic-dart#phase-1-rollout-roadmap) — the *collector adapter* deliverable. It exists so the upstream collection layer (Velociraptor) and the upstream analysis engine (Agentic-DART) can stay independent of each other.
+
+| Concern                  | Where it lives                                                                                                       |
+|--------------------------|----------------------------------------------------------------------------------------------------------------------|
+| **Collection** on hosts  | [Velociraptor](https://docs.velociraptor.app/) agent (binary, runs on the endpoint)                                  |
+| **Layout normalization** | **This repo** *(Phase 1.3, current)*                                                                                 |
+| **Analysis & reasoning** | [Agentic-DART](https://github.com/Juwon1405/agentic-dart) (runs on the same analysis server)                         |
+| **Chain-of-custody**     | This adapter seeds it (`manifest.json` + SHA-256 index); Agentic-DART continues it as `audit.jsonl` entry 1 onwards. |
+
+---
+
 ## Why this exists
 
-[Velociraptor](https://docs.velociraptor.app/) is an excellent open-source IR collector with cross-platform agents (Windows / Linux / macOS) and a huge artifact library (Windows.KapeFiles.Targets, Windows.Forensics.Lnkfiles, MacOS.Forensics.*, Linux.Forensics.*).
+[Velociraptor](https://docs.velociraptor.app/) is an excellent open-source IR collector with cross-platform agents (Windows / Linux / macOS) and a huge artifact library (`Windows.KapeFiles.Targets`, `Windows.Forensics.Lnkfiles`, `MacOS.Forensics.*`, `Linux.Forensics.*`).
 
 [Agentic-DART](https://github.com/Juwon1405/agentic-dart) is an autonomous DFIR analysis engine that consumes a flat, well-named `evidence_root/` directory:
 
@@ -49,43 +71,12 @@ It is stdlib-only by design (no third-party Python packages), and small enough t
 
 ---
 
-## Relationship to Agentic-DART
-
-| Concern                  | Where it lives                                  |
-|--------------------------|-------------------------------------------------|
-| **Collection** on hosts  | Velociraptor agent (binary, runs on the endpoint) |
-| **Layout normalization** | **This repo** (runs on the analysis server)     |
-| **Analysis & reasoning** | [Agentic-DART](https://github.com/Juwon1405/agentic-dart) (runs on the analysis server) |
-| **Chain-of-custody**     | This adapter seeds it (`manifest.json` + SHA-256 index); Agentic-DART continues it (`audit.jsonl`) |
-
-**The adapter is installed once on the analysis server.** It is *not* installed on incident hosts. Each incident host receives a Velociraptor agent binary for its OS/arch.
-
-```
-┌───────────────────────┐        ZIP        ┌────────────────────────────────────────┐
-│ Incident host         │  ───────────▶     │ Central analysis server (Linux/macOS)  │
-│  Velociraptor agent   │  (SCP / SMB)      │  ┌──────────────────────────────────┐  │
-│  (Win / Linux / Mac)  │                   │  │ dart-collector-adapter            │  │
-└───────────────────────┘                   │  │   ZIP -> evidence_root/           │  │
-                                            │  │   + manifest.json + SHA-256 index │  │
-                                            │  └──────────────────────────────────┘  │
-                                            │           │                              │
-                                            │           ▼                              │
-                                            │  ┌──────────────────────────────────┐  │
-                                            │  │ Agentic-DART                       │  │
-                                            │  │   reads evidence_root/             │  │
-                                            │  │   produces findings.json + report  │  │
-                                            │  └──────────────────────────────────┘  │
-                                            └────────────────────────────────────────┘
-```
-
----
-
 ## Install
 
 The analysis server runs on Linux or macOS. `install.sh` does two things in one pass:
 
 1. Installs the Python adapter (`dart-collector-adapter`).
-2. Downloads Velociraptor agent binaries for every common OS/arch combo into `./bin/velociraptor/`, so responders can ship the right binary to any incident host without leaving the server.
+2. Downloads Velociraptor agent binaries for every common OS / arch combo into `./bin/velociraptor/`, so responders can ship the right binary to any incident host without leaving the server.
 
 ```bash
 git clone https://github.com/Juwon1405/agentic-dart-collector-adapter
@@ -259,7 +250,7 @@ See [`src/dart_collector_adapter/layout.py`](src/dart_collector_adapter/layout.p
 
 ---
 
-## manifest.json
+## `manifest.json`
 
 Written under `evidence_root/manifest.json`:
 
@@ -312,20 +303,28 @@ Because forking 100k+ lines of Go to add one Python adapter would be insane.
 
 ---
 
-## Roadmap
+## Phase roadmap
 
-- **v0.1** *(current)* — Windows-heavy artifact mapping, stdlib-only adapter, SHA-256 manifest, CI matrix on Linux/macOS × Python 3.10/3.11/3.12.
-- **v0.2** — Sidecar generation: invoke `PECmd`, `AmcacheParser`, `EvtxECmd` when present on the analysis server to drop `*.csv` / `*.json` next to binary artifacts. Optional, off by default.
-- **v0.3** — Velociraptor `results/*.json` ingestion (the parsed-artifact JSON) merged into the manifest.
-- **v0.4** — macOS and Linux artifact coverage parity with Windows.
+![roadmap](docs/img/roadmap.png)
 
-Roadmap is intentionally short. The adapter should remain a single clear job.
+| Phase     | Status   | Scope                                                                                            |
+|-----------|----------|--------------------------------------------------------------------------------------------------|
+| **v0.1**  | current  | Velociraptor ZIP → evidence_root with SHA-256 manifest. 27/27 tests on Linux+macOS × py3.10/11/12. |
+| **v0.2**  | next     | Sidecar generation — auto-invoke `PECmd`, `AmcacheParser`, `EvtxECmd` when present locally.       |
+| **v0.3**  | later    | Ingest Velociraptor `results/*.json` (parsed-artifact JSON) and merge into the manifest.          |
+| **v0.4**  | later    | macOS + Linux artifact coverage parity with Windows.                                              |
+
+The adapter is intentionally narrow. It will not grow into a "platform."
 
 ---
 
-## Companion project
+## Companion projects (Agentic-DART ecosystem)
 
-➡️ **[Agentic-DART](https://github.com/Juwon1405/agentic-dart)** — the analysis engine that reads what this adapter produces.
+| Repo                                                                                                    | Role                                                                                                          | License    |
+|---------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|------------|
+| **[agentic-dart](https://github.com/Juwon1405/agentic-dart)**                                            | Autonomous DFIR analysis engine. Reads `evidence_root/`; emits findings + audit chain.                         | MIT        |
+| **[agentic-dart-collector-adapter](https://github.com/Juwon1405/agentic-dart-collector-adapter)** *(this)* | Velociraptor ZIP → `evidence_root` layout glue. Seeds chain-of-custody.                                        | Apache-2.0 |
+| **[yushin-mac-artifact-collector](https://github.com/Juwon1405/yushin-mac-artifact-collector)**          | Single-file bash collector for macOS hosts where Velociraptor isn't an option. Originator of the supply-chain IOC patterns now in `agentic-dart`. | MIT        |
 
 ---
 
@@ -335,6 +334,6 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 ## Author
 
-**YuShin (優心 / Bang Juwon)** — DFIR practitioner, Tokyo.
+**YuShin** (優心 / Bang Juwon) — DFIR practitioner, Tokyo.
 
 > *"One small adapter. One large saved hour per incident."*

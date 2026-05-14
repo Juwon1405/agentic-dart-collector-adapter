@@ -309,7 +309,7 @@ Because forking 100k+ lines of Go to add one Python adapter would be insane.
 
 | Phase     | Status   | Scope                                                                                            |
 |-----------|----------|--------------------------------------------------------------------------------------------------|
-| **v0.1**  | current  | Velociraptor ZIP → evidence_root with SHA-256 manifest. 27/27 tests on Linux+macOS × py3.10/11/12. |
+| **v0.1**  | current  | Velociraptor ZIP → evidence_root with SHA-256 manifest. Full test suite passing on Linux+macOS × py3.10/11/12. |
 | **v0.2**  | next     | Sidecar generation — auto-invoke `PECmd`, `AmcacheParser`, `EvtxECmd` when present locally.       |
 | **v0.3**  | later    | Ingest Velociraptor `results/*.json` (parsed-artifact JSON) and merge into the manifest.          |
 | **v0.4**  | later    | macOS + Linux artifact coverage parity with Windows.                                              |

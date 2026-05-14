@@ -105,7 +105,7 @@ def diagram_arch():
     _zone(ax, 74.5, 7, 24, 41, DART, "3. Agentic-DART", "same analysis server")
     _box(ax, 76.5, 26, 20, 14, DART, title="dart_agent",
          lines=["reads evidence_root", "runs playbook v3",
-                "67 read-only MCP tools", "SHA-256 audit chain"])
+                "typed read-only MCP tools", "SHA-256 audit chain"])
     _box(ax, 76.5, 10, 20, 14, "#9bb87f", title="findings.json",
          lines=["report.md", "audit.jsonl",
                 "extends chain-of-custody", "from manifest seed"])
@@ -117,7 +117,7 @@ def diagram_arch():
             "Velociraptor binaries shipped to each incident host on demand",
             ha="center", va="top", fontsize=10, color=TEXT_SEC, style="italic")
     ax.text(50, 1.5,
-            "no incident-host install  ·  stdlib-only Python  ·  27/27 tests  ·  MIT",
+            "no incident-host install  ·  stdlib-only Python  ·  full test suite  ·  MIT",
             ha="center", va="top", fontsize=9, color=TEXT_SEC)
 
     plt.tight_layout()
@@ -141,7 +141,7 @@ def diagram_roadmap():
     phases = [
         ("v0.1", "current",
          ["Velociraptor ZIP", "  to evidence_root",
-          "SHA-256 manifest", "27/27 tests · CI green"],
+          "SHA-256 manifest", "full test suite · CI green"],
          ADAPTER, True),
         ("v0.2", "next",
          ["sidecar generation", "PECmd · AmcacheParser",

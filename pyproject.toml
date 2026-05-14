@@ -7,13 +7,13 @@ name = "agentic-dart-collector-adapter"
 version = "0.1.0"
 description = "Convert Velociraptor IR collector output into the evidence_root layout for Agentic-DART."
 authors = [{ name = "Bang Juwon (YuShin)", email = "juwon1405.jp@gmail.com" }]
-license = { text = "Apache-2.0" }
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
     "Programming Language :: Python :: 3",

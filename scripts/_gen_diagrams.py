@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-Generate architecture PNG for agentic-dart-collector-adapter README.
+Generate architecture PNGs for agentic-dart-collector-adapter README.
 
-Two diagrams:
-- arch.png       : end-to-end flow (incident host -> adapter -> agentic-dart)
-- roadmap.png    : v0.1 / v0.2 / v0.3 / v0.4 phases
+Style brief: quiet luxury · dark theme · matches GitHub canvas-dark
+(#0d1117) and the author's site palette.
 """
 import matplotlib
 matplotlib.use("Agg")
@@ -12,171 +11,114 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 from pathlib import Path
 
-# Atlassian-friendly palette
-BG     = "#FFFFFF"
-TEXT   = "#172B4D"
-ACCENT = "#0052CC"
-MINT   = "#00875A"
-RED    = "#DE350B"
-AMBER  = "#FF8B00"
-PURPLE = "#5243AA"
-GRAY   = "#5E6C84"
-LIGHT  = "#F4F5F7"
-WHITE  = "#FFFFFF"
+# Palette: quiet luxury / GitHub canvas-dark
+BG          = "#0d1117"
+BOX_FILL    = "#161b22"
+TEXT_PRI    = "#e6edf3"
+TEXT_SEC    = "#8b949e"
+
+HOST        = "#c97064"   # muted coral
+ADAPTER     = "#79a6dc"   # muted blue
+ROOT        = "#7fb88f"   # muted green
+DART        = "#6db17b"   # muted green
+MANIFEST    = "#b88dd3"   # muted purple
 
 OUT = Path(__file__).parent.parent / "docs" / "img"
 OUT.mkdir(parents=True, exist_ok=True)
 
 
-def _box(ax, x, y, w, h, color, *, title, lines, font=10.5):
-    rect = FancyBboxPatch((x, y), w, h,
-                          boxstyle="round,pad=0.3,rounding_size=0.8",
-                          linewidth=1.8, edgecolor=color,
-                          facecolor=LIGHT)
+def _box(ax, x, y, w, h, color, *, title, lines, title_size=11.5, body_size=9.5):
+    rect = FancyBboxPatch(
+        (x, y), w, h,
+        boxstyle="round,pad=0.25,rounding_size=0.6",
+        linewidth=1.4, edgecolor=color, facecolor=BOX_FILL,
+    )
     ax.add_patch(rect)
-    ax.text(x + w/2, y + h - 2.0, title,
-            ha="center", va="top", fontsize=11.5, fontweight="bold",
-            color=color)
+    ax.text(x + w/2, y + h - 2.0, title, ha="center", va="top",
+            fontsize=title_size, fontweight="bold", color=color)
+    start_y = y + h - 5.5
     for i, line in enumerate(lines):
-        ax.text(x + w/2, y + h - 5.6 - i*2.4, line,
-                ha="center", va="top", fontsize=font, color=TEXT)
+        ax.text(x + w/2, start_y - i*2.0, line, ha="center", va="top",
+                fontsize=body_size, color=TEXT_PRI)
 
 
-def _arrow(ax, x1, y1, x2, y2, color=GRAY, label=None, label_y_off=1.2):
+def _arrow(ax, x1, y1, x2, y2, color=TEXT_SEC, label=None, label_offset=1.4):
     arr = FancyArrowPatch((x1, y1), (x2, y2),
-                          arrowstyle='-|>', mutation_scale=22,
-                          linewidth=2.0, color=color)
+        arrowstyle="-|>", mutation_scale=20,
+        linewidth=1.8, color=color)
     ax.add_patch(arr)
     if label:
-        ax.text((x1+x2)/2, (y1+y2)/2 + label_y_off, label,
-                ha='center', fontsize=9.5, color=color, style='italic',
-                fontweight='bold')
+        mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+        ax.text(mx, my + label_offset, label, ha="center", va="bottom",
+                fontsize=8.5, color=color, style="italic", fontweight="bold")
 
 
-# ────────────────────────────────────────────────────────────────
-# arch.png — end-to-end flow
-# ────────────────────────────────────────────────────────────────
+def _zone(ax, x, y, w, h, color, title, subtitle):
+    rect = FancyBboxPatch((x, y), w, h,
+        boxstyle="round,pad=0.5,rounding_size=1.0",
+        linewidth=1.2, edgecolor=color, facecolor="none", linestyle="--")
+    ax.add_patch(rect)
+    ax.text(x + w/2, y + h - 1.6, title, ha="center", va="top",
+            fontsize=12, fontweight="bold", color=color)
+    ax.text(x + w/2, y + h - 4.0, subtitle, ha="center", va="top",
+            fontsize=9, color=TEXT_SEC, style="italic")
+
+
 def diagram_arch():
-    fig, ax = plt.subplots(figsize=(15, 8), facecolor=BG)
+    fig, ax = plt.subplots(figsize=(16, 9), facecolor=BG)
     ax.set_facecolor(BG)
     ax.set_xlim(0, 100)
-    ax.set_ylim(0, 60)
-    ax.axis('off')
+    ax.set_ylim(0, 56)
+    ax.axis("off")
 
-    ax.text(50, 57.5,
-            "agentic-dart-collector-adapter  ·  end-to-end flow",
-            ha="center", fontsize=15, fontweight="bold", color=TEXT)
-    ax.text(50, 54.5,
-            "incident host  →  this adapter (analysis server)  →  Agentic-DART",
-            ha="center", fontsize=10.5, color=GRAY, style="italic")
+    ax.text(50, 53.5, "agentic-dart-collector-adapter  ·  end-to-end flow",
+            ha="center", va="top", fontsize=16, fontweight="bold", color=TEXT_PRI)
+    ax.text(50, 50.5, "incident host  ->  this adapter (analysis server)  ->  Agentic-DART",
+            ha="center", va="top", fontsize=10.5, color=TEXT_SEC, style="italic")
 
-    # ── Left zone: incident host ────────────────────────────────
-    zone1 = FancyBboxPatch((2, 8), 23, 40,
-                           boxstyle="round,pad=0.4,rounding_size=1.0",
-                           linewidth=2.0, edgecolor=RED,
-                           facecolor="#FDF6F5")
-    ax.add_patch(zone1)
-    ax.text(13.5, 45.5, "1. Incident host",
-            ha="center", fontsize=12, fontweight="bold", color=RED)
-    ax.text(13.5, 42.7, "(short-lived, no install)",
-            ha="center", fontsize=9, color=GRAY, style="italic")
+    _zone(ax, 1.5, 7, 22, 41, HOST, "1. Incident host", "short-lived, no install")
+    _box(ax, 3.5, 26, 18, 14, HOST, title="Velociraptor agent",
+         lines=["OS-matched binary", "Win · Linux · macOS",
+                "1x execution", "no agent install"])
+    _box(ax, 3.5, 10, 18, 12, "#a8856a", title="evidence.zip",
+         lines=["Velociraptor", "offline-collector", "output format"])
+    _arrow(ax, 12.5, 26, 12.5, 22, color=TEXT_SEC)
 
-    _box(ax, 4, 28, 19, 11, RED,
-         title="Velociraptor agent",
-         lines=["OS-matched binary",
-                "Win / Linux / macOS",
-                "1× execution",
-                "no agent install"],
-         font=9.5)
-
-    _box(ax, 4, 12, 19, 11, AMBER,
-         title="evidence.zip",
-         lines=["Velociraptor",
-                "offline-collector",
-                "output format"],
-         font=9.5)
-
-    _arrow(ax, 13.5, 28, 13.5, 23, color=GRAY, label_y_off=0)
-
-    # ── Middle zone: analysis server (this adapter) ──────────────
-    zone2 = FancyBboxPatch((28, 8), 44, 40,
-                           boxstyle="round,pad=0.4,rounding_size=1.0",
-                           linewidth=2.5, edgecolor=ACCENT,
-                           facecolor="#F0F5FB")
-    ax.add_patch(zone2)
-    ax.text(50, 45.5, "2. Analysis server",
-            ha="center", fontsize=12, fontweight="bold", color=ACCENT)
-    ax.text(50, 42.7, "(Linux / macOS, install once)",
-            ha="center", fontsize=9, color=GRAY, style="italic")
-
-    _box(ax, 30, 28, 18, 11, ACCENT,
-         title="dart-collector-adapter",
-         lines=["classify artifacts",
-                "stream-copy + safe paths",
-                "SHA-256 each file",
-                "write manifest.json"],
-         font=9.5)
-
-    _box(ax, 52, 28, 18, 11, MINT,
-         title="evidence_root/",
-         lines=["Prefetch/   Amcache/",
-                "Registry/   EventLogs/",
-                "Browser/    WebLogs/",
-                "MFT/  LNK/  Other/"],
-         font=9.5)
-
-    _arrow(ax, 48, 33.5, 52, 33.5, color=ACCENT, label="layout", label_y_off=2.2)
-
-    _box(ax, 30, 12, 40, 11, PURPLE,
-         title="manifest.json  +  SHA-256 index",
+    _zone(ax, 26, 7, 46, 41, ADAPTER, "2. Analysis server",
+          "Linux or macOS · install once")
+    _box(ax, 28, 26, 19, 14, ADAPTER, title="dart-collector-adapter",
+         lines=["classify artifacts", "safe-path stream copy",
+                "SHA-256 each file", "write manifest.json"])
+    _box(ax, 51, 26, 19, 14, ROOT, title="evidence_root/",
+         lines=["Prefetch   Amcache", "Registry   EventLogs",
+                "Browser    WebLogs", "MFT  LNK  Other"])
+    _arrow(ax, 47, 33, 51, 33, color=ADAPTER, label="layout", label_offset=1.5)
+    _box(ax, 28, 11, 42, 11, MANIFEST, title="manifest.json  +  SHA-256 index",
          lines=["chain-of-custody seed",
-                "case_id  ·  source  ·  adapter version  ·  category counts",
-                "(consumed by Agentic-DART's audit chain as entry 0)"],
-         font=9.5)
+                "case_id  ·  source  ·  adapter version",
+                "consumed by Agentic-DART as audit entry 0"])
+    _arrow(ax, 37, 26, 37, 22, color=MANIFEST)
+    _arrow(ax, 60, 26, 60, 22, color=MANIFEST)
+    _arrow(ax, 23.5, 33, 28, 33, color=HOST,
+           label="SCP / SMB / USB", label_offset=1.5)
 
-    _arrow(ax, 39, 28, 39, 23, color=PURPLE, label_y_off=0)
-    _arrow(ax, 61, 28, 61, 23, color=PURPLE, label_y_off=0)
+    _zone(ax, 74.5, 7, 24, 41, DART, "3. Agentic-DART", "same analysis server")
+    _box(ax, 76.5, 26, 20, 14, DART, title="dart_agent",
+         lines=["reads evidence_root", "runs playbook v3",
+                "67 read-only MCP tools", "SHA-256 audit chain"])
+    _box(ax, 76.5, 10, 20, 14, "#9bb87f", title="findings.json",
+         lines=["report.md", "audit.jsonl",
+                "extends chain-of-custody", "from manifest seed"])
+    _arrow(ax, 86.5, 26, 86.5, 24, color=DART)
+    _arrow(ax, 72, 33, 76.5, 33, color=DART, label="read", label_offset=1.5)
 
-    _arrow(ax, 25, 33.5, 30, 33.5, color=RED, label="SCP / SMB / USB", label_y_off=2.2)
-
-    # ── Right zone: Agentic-DART ────────────────────────────────
-    zone3 = FancyBboxPatch((75, 8), 23, 40,
-                           boxstyle="round,pad=0.4,rounding_size=1.0",
-                           linewidth=2.0, edgecolor=MINT,
-                           facecolor="#F0F8F5")
-    ax.add_patch(zone3)
-    ax.text(86.5, 45.5, "3. Agentic-DART",
-            ha="center", fontsize=12, fontweight="bold", color=MINT)
-    ax.text(86.5, 42.7, "(same analysis server)",
-            ha="center", fontsize=9, color=GRAY, style="italic")
-
-    _box(ax, 77, 28, 19, 11, MINT,
-         title="dart_agent",
-         lines=["reads evidence_root",
-                "runs playbook v3",
-                "67 read-only MCP tools",
-                "SHA-256 audit chain"],
-         font=9.5)
-
-    _box(ax, 77, 12, 19, 11, ACCENT,
-         title="findings.json",
-         lines=["report.md",
-                "audit.jsonl",
-                "(extends chain-of-",
-                "custody from seed)"],
-         font=9.5)
-
-    _arrow(ax, 86.5, 28, 86.5, 23, color=MINT, label_y_off=0)
-    _arrow(ax, 72, 33.5, 77, 33.5, color=MINT, label="read", label_y_off=2.2)
-
-    # ── Footer ──────────────────────────────────────────────────
-    ax.text(50, 4.5,
+    ax.text(50, 4.0,
             "the adapter installs ONCE on the analysis server  ·  "
             "Velociraptor binaries shipped to each incident host on demand",
-            ha="center", fontsize=10, color=GRAY, style="italic")
-    ax.text(50, 1.8,
-            "no incident-host install · stdlib-only Python · 27/27 tests · Apache-2.0",
-            ha="center", fontsize=9, color=GRAY)
+            ha="center", va="top", fontsize=10, color=TEXT_SEC, style="italic")
+    ax.text(50, 1.5,
+            "no incident-host install  ·  stdlib-only Python  ·  27/27 tests  ·  MIT",
+            ha="center", va="top", fontsize=9, color=TEXT_SEC)
 
     plt.tight_layout()
     out = OUT / "arch.png"
@@ -186,33 +128,33 @@ def diagram_arch():
     print(f"  ok  {out.name}")
 
 
-# ────────────────────────────────────────────────────────────────
-# roadmap.png — phase plan
-# ────────────────────────────────────────────────────────────────
 def diagram_roadmap():
-    fig, ax = plt.subplots(figsize=(14, 4), facecolor=BG)
+    fig, ax = plt.subplots(figsize=(15, 4.5), facecolor=BG)
     ax.set_facecolor(BG)
     ax.set_xlim(0, 100)
-    ax.set_ylim(0, 30)
-    ax.axis('off')
+    ax.set_ylim(0, 32)
+    ax.axis("off")
 
-    ax.text(50, 27,
-            "agentic-dart-collector-adapter  ·  phase roadmap",
-            ha="center", fontsize=14, fontweight="bold", color=TEXT)
+    ax.text(50, 29.5, "agentic-dart-collector-adapter  ·  phase roadmap",
+            ha="center", va="top", fontsize=15, fontweight="bold", color=TEXT_PRI)
 
     phases = [
         ("v0.1", "current",
-         ["Velociraptor ZIP -> evidence_root", "SHA-256 manifest", "27/27 tests", "CI Linux+macOS x py3.10/11/12"],
-         ACCENT, True),
+         ["Velociraptor ZIP", "  to evidence_root",
+          "SHA-256 manifest", "27/27 tests · CI green"],
+         ADAPTER, True),
         ("v0.2", "next",
-         ["sidecar generation", "PECmd / AmcacheParser /", "EvtxECmd auto-invoke", "(when available locally)"],
-         AMBER, False),
+         ["sidecar generation", "PECmd · AmcacheParser",
+          "EvtxECmd auto-invoke", "when available locally"],
+         "#5bc4b8", False),
         ("v0.3", "later",
-         ["Velociraptor results/*.json", "parsed-artifact JSON merged", "into manifest"],
-         PURPLE, False),
+         ["Velociraptor results/", "parsed-artifact JSON",
+          "merged into manifest"],
+         MANIFEST, False),
         ("v0.4", "later",
-         ["macOS + Linux artifact", "coverage parity with Windows"],
-         GRAY, False),
+         ["macOS + Linux", "artifact coverage",
+          "parity with Windows"],
+         TEXT_SEC, False),
     ]
 
     x_start = 4
@@ -221,32 +163,29 @@ def diagram_roadmap():
 
     for i, (ver, status, lines, color, is_current) in enumerate(phases):
         x = x_start + i * (box_w + gap)
-        # Title bar
-        title_bar = FancyBboxPatch((x, 17), box_w, 5,
-                                   boxstyle="round,pad=0.1,rounding_size=0.4",
-                                   linewidth=0, facecolor=color)
+        title_bar = FancyBboxPatch((x, 18), box_w, 5,
+            boxstyle="round,pad=0.1,rounding_size=0.4",
+            linewidth=0, facecolor=color)
         ax.add_patch(title_bar)
-        ax.text(x + box_w/2, 19.5, f"{ver}  ·  {status}",
-                ha="center", va="center", fontsize=11, fontweight="bold",
-                color="white")
-        # Body
-        body = FancyBboxPatch((x, 4), box_w, 12.5,
-                              boxstyle="round,pad=0.2,rounding_size=0.6",
-                              linewidth=1.5, edgecolor=color,
-                              facecolor=LIGHT if not is_current else "#FFF8E7")
+        ax.text(x + box_w/2, 20.5, f"{ver}  ·  {status}",
+                ha="center", va="center", fontsize=11.5,
+                fontweight="bold", color="#0d1117")
+        body_fill = BOX_FILL if not is_current else "#1d2733"
+        body = FancyBboxPatch((x, 5), box_w, 12,
+            boxstyle="round,pad=0.2,rounding_size=0.5",
+            linewidth=1.0, edgecolor=color, facecolor=body_fill)
         ax.add_patch(body)
         for j, line in enumerate(lines):
-            ax.text(x + box_w/2, 13.5 - j*2.2, line,
-                    ha="center", fontsize=9, color=TEXT)
-        # Arrow between phases
+            ax.text(x + box_w/2, 14.5 - j*1.9, line,
+                    ha="center", va="top",
+                    fontsize=9.5, color=TEXT_PRI)
         if i < len(phases) - 1:
-            arr_x1 = x + box_w + 0.3
-            arr_x2 = x + box_w + gap - 0.3
-            _arrow(ax, arr_x1, 19.5, arr_x2, 19.5, color=GRAY)
+            _arrow(ax, x + box_w + 0.2, 20.5,
+                   x + box_w + gap - 0.2, 20.5, color=TEXT_SEC)
 
-    ax.text(50, 1,
+    ax.text(50, 1.5,
             "adapter is intentionally narrow — one clear job, plus thin parser sidecar invocation later",
-            ha="center", fontsize=9, color=GRAY, style="italic")
+            ha="center", va="top", fontsize=9.5, color=TEXT_SEC, style="italic")
 
     plt.tight_layout()
     out = OUT / "roadmap.png"
@@ -257,7 +196,7 @@ def diagram_roadmap():
 
 
 if __name__ == "__main__":
-    print("[generating adapter diagrams]")
+    print("[generating dark-theme adapter diagrams]")
     diagram_arch()
     diagram_roadmap()
     print(f"\ndone -> {OUT}")

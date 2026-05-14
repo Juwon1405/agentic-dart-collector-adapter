@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/Juwon1405/agentic-dart-collector-adapter/actions/workflows/tests.yml/badge.svg)](https://github.com/Juwon1405/agentic-dart-collector-adapter/actions/workflows/tests.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Phase](https://img.shields.io/badge/phase-1.3%20%C2%B7%20Agentic--DART%20roadmap-FF8B00)](https://github.com/Juwon1405/agentic-dart#phase-1-rollout-roadmap)
 [![Companion](https://img.shields.io/badge/companion-Agentic--DART-DD2C00?logo=github)](https://github.com/Juwon1405/agentic-dart)
 
@@ -326,7 +326,7 @@ The adapter is intentionally narrow. It will not grow into a "platform."
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
 
 ## Author
 

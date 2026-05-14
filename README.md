@@ -318,13 +318,9 @@ The adapter is intentionally narrow. It will not grow into a "platform."
 
 ---
 
-## Companion projects (Agentic-DART ecosystem)
+## Companion
 
-| Repo                                                                                                    | Role                                                                                                          | License    |
-|---------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|------------|
-| **[agentic-dart](https://github.com/Juwon1405/agentic-dart)**                                            | Autonomous DFIR analysis engine. Reads `evidence_root/`; emits findings + audit chain.                         | MIT        |
-| **[agentic-dart-collector-adapter](https://github.com/Juwon1405/agentic-dart-collector-adapter)** *(this)* | Velociraptor ZIP → `evidence_root` layout glue. Seeds chain-of-custody.                                        | Apache-2.0 |
-| **[yushin-mac-artifact-collector](https://github.com/Juwon1405/yushin-mac-artifact-collector)**          | Single-file bash collector for macOS hosts where Velociraptor isn't an option. Originator of the supply-chain IOC patterns now in `agentic-dart`. | MIT        |
+**[agentic-dart](https://github.com/Juwon1405/agentic-dart)** — the analysis engine this adapter feeds.
 
 ---
 

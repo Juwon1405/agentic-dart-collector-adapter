@@ -69,6 +69,42 @@ Velociraptor offline ZIP  ─▶  dart-collector-adapter  ─▶  evidence_root/
 
 It is stdlib-only by design (no third-party Python packages), and small enough to audit in one sitting.
 
+### Positioning vs. commercial EDR collection (Falcon Forensics, Tanium)
+
+This adapter **complements — does not compete with** — commercial
+EDR-based ad-hoc collection (CrowdStrike Falcon Forensics, Tanium
+Threat Response, etc.).
+
+Commercial agent-based collection covers the **80% case**: hosts that
+already run the vendor agent, where the IR team can push a collection
+job from the central console and pull a curated artefact bundle back
+in minutes. That is the right tool for that scenario.
+
+This adapter covers the remaining **20%** — the cases that determine
+how bad an incident gets:
+
+- **No agent installed.** Third-party / partner / contractor endpoints,
+  BYOD devices, legacy servers, isolated lab networks, build systems.
+- **Agent installed but ineffective.** Compromised hosts where the
+  attacker disabled or tampered with the EDR agent before triage.
+- **Raw disk image acquisitions.** DD / E01 / AFF / VMDK images
+  handed over by a client or seized for analysis — the host is gone,
+  the image is all there is.
+- **Emergency triage.** Need to acquire from an unmanaged host in
+  the next thirty minutes, no time to deploy and license an agent.
+- **Sensitive cases.** Investigations where pushing a job through the
+  central commercial console is itself a leak risk.
+
+Velociraptor's offline collector is a **single binary, no install, no
+network call**. Drop it on a USB, run it, get the ZIP, hand it to this
+adapter, and Agentic-DART sees the same `evidence_root` layout it sees
+from any other source.
+
+Agentic-DART intentionally consumes **both** channels through the same
+`evidence_root` contract. The analysis engine does not care which
+collector produced the data, and the organization is not coupled to a
+single commercial vendor's collection format.
+
 ---
 
 ## Install

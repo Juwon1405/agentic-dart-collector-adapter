@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from pathlib import Path
+import zipfile
 
 from . import __version__
 from .adapter import adapt
@@ -52,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
             output_evidence_root=args.output,
             case_id=args.case_id,
             overwrite=args.overwrite,
+            include_sha256_index=not args.no_hash_index,
         )
     except FileNotFoundError as e:
         print(f"error: {e}", file=sys.stderr)
@@ -59,6 +60,9 @@ def main(argv: list[str] | None = None) -> int:
     except FileExistsError as e:
         print(f"error: {e}", file=sys.stderr)
         return 3
+    except zipfile.BadZipFile as e:
+        print(f"error: malformed ZIP: {e}", file=sys.stderr)
+        return 4
     except Exception as e:
         print(f"error: {type(e).__name__}: {e}", file=sys.stderr)
         return 1
@@ -71,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             "files_skipped": result.files_skipped,
             "bytes_copied": result.bytes_copied,
             "categories": result.categories,
+            "source_sha256": result.source_sha256,
         }
         print(json.dumps(summary, indent=2, sort_keys=True))
         if result.skipped_paths:

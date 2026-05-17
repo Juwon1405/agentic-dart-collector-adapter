@@ -253,12 +253,15 @@ class AdapterResult:
 
 The adapter is opinionated about what it *won't* do, to keep its security surface tiny:
 
-- Files larger than 10 GiB are skipped (configurable).
+- Files larger than 10 GiB are skipped (`max_bytes_per_file`, configurable).
+- Cumulative extracted bytes are capped at 50 GiB (`max_total_bytes`, configurable) to defend against many-small-files zip-bomb shapes.
+- The per-file cap is enforced against bytes *actually read* — the ZIP header's `file_size` is treated as untrusted.
+- ZIP members whose POSIX mode marks them as symbolic links are skipped.
 - ZIP members with control characters in the name are skipped.
 - ZIP members whose path would resolve outside `evidence_root` are skipped.
-- Existing `evidence_root` with a manifest is not overwritten (use `--overwrite`).
+- Existing `evidence_root` with a manifest is not overwritten (use `--overwrite`; when used, known layout subdirectories are cleared first so stale evidence cannot contaminate the new manifest).
 
-Skipped paths are reported in `AdapterResult.skipped_paths`.
+Skipped paths are reported in `AdapterResult.skipped_paths` **and** persisted under `skipped` in `manifest.json` for chain-of-custody.
 
 ---
 
@@ -292,11 +295,12 @@ Written under `evidence_root/manifest.json`:
 
 ```json
 {
-  "manifest_version": "1.0",
+  "manifest_version": "1.1",
   "case_id": "case-2026-001",
   "generated_at": "2026-05-13T15:00:00+00:00",
   "source": {
     "zip": "/tmp/evidence.zip",
+    "sha256": "44e8c1...",
     "type": "velociraptor_offline_collector"
   },
   "host": {
@@ -306,7 +310,7 @@ Written under `evidence_root/manifest.json`:
   },
   "adapter": {
     "name": "agentic-dart-collector-adapter",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "counters": {
     "files_copied": 174,
@@ -320,12 +324,15 @@ Written under `evidence_root/manifest.json`:
     "eventlog": 7,
     "browser": 4
   },
+  "skipped": [],
   "sha256_index": {
     "Prefetch/SVCHOST.EXE-ABC.pf": "9d7f...",
     "Amcache/Amcache.hve": "3c8e..."
   }
 }
 ```
+
+> Manifest schema bumped to `1.1` in v0.2.0: added `source.sha256` (input-ZIP anchor) and `skipped` (audit trail).
 
 ---
 
@@ -345,10 +352,11 @@ Because forking 100k+ lines of Go to add one Python adapter would be insane.
 
 | Phase     | Status   | Scope                                                                                            |
 |-----------|----------|--------------------------------------------------------------------------------------------------|
-| **v0.1**  | current  | Velociraptor ZIP → evidence_root with SHA-256 manifest. Full test suite passing on Linux+macOS × py3.10/11/12. |
-| **v0.2**  | next     | Sidecar generation — auto-invoke `PECmd`, `AmcacheParser`, `EvtxECmd` when present locally.       |
-| **v0.3**  | later    | Ingest Velociraptor `results/*.json` (parsed-artifact JSON) and merge into the manifest.          |
-| **v0.4**  | later    | macOS + Linux artifact coverage parity with Windows.                                              |
+| **v0.1**  | done     | Velociraptor ZIP → evidence_root with SHA-256 manifest. Full test suite passing on Linux+macOS × py3.10/11/12. |
+| **v0.2**  | current  | Hardened integrity (input-ZIP SHA-256 anchor, persisted skip log, overwrite-safe), ZIP-bomb + symlink defenses, single-pass hashing, mtime preservation, install-time binary checksum verification. |
+| **v0.3**  | next     | Sidecar generation — auto-invoke `PECmd`, `AmcacheParser`, `EvtxECmd` when present locally.       |
+| **v0.4**  | later    | Ingest Velociraptor `results/*.json` (parsed-artifact JSON) and merge into the manifest.          |
+| **v0.5**  | later    | macOS + Linux artifact coverage parity with Windows.                                              |
 
 The adapter is intentionally narrow. It will not grow into a "platform."
 

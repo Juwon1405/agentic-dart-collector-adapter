@@ -5,6 +5,8 @@ The manifest is the chain-of-custody seed for Agentic-DART:
 - adapter_version identifies which adapter produced the layout
 - file_count / total_bytes catch silent truncation
 - sha256_index lets downstream tools verify integrity without re-reading the ZIP
+- source.sha256 anchors the input ZIP's identity so the chain survives rename
+- skipped records what the adapter refused, with the reason
 """
 from __future__ import annotations
 
@@ -16,7 +18,7 @@ from pathlib import Path
 from .hash_indexer import compute_sha256_tree
 
 MANIFEST_NAME = "manifest.json"
-MANIFEST_VERSION = "1.0"
+MANIFEST_VERSION = "1.1"
 
 
 def write_manifest(
@@ -29,14 +31,29 @@ def write_manifest(
     categories: dict[str, int],
     skipped_count: int,
     include_sha256_index: bool = True,
+    source_sha256: str | None = None,
+    sha256_index: dict[str, str] | None = None,
+    skipped_paths: list[str] | None = None,
+    adapter_version: str | None = None,
 ) -> Path:
     """
     Write manifest.json under evidence_root and return its path.
+
+    Parameters
+    ----------
+    sha256_index : pre-computed { relative_path: hex_digest }. If None and
+        include_sha256_index is True, the output tree is walked.
+    source_sha256 : SHA-256 of the input collector ZIP (chain-of-custody anchor).
+    skipped_paths : list of "<member>  (<reason>)" strings recorded by the adapter.
+    adapter_version : injected to avoid an import-time cycle.
     """
     root = Path(evidence_root).resolve()
     root.mkdir(parents=True, exist_ok=True)
 
-    manifest = {
+    if adapter_version is None:
+        from . import __version__ as adapter_version  # local import: avoid cycle at module load
+
+    manifest: dict = {
         "manifest_version": MANIFEST_VERSION,
         "case_id": case_id,
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -51,7 +68,7 @@ def write_manifest(
         },
         "adapter": {
             "name": "agentic-dart-collector-adapter",
-            "version": "0.1.0",
+            "version": adapter_version,
         },
         "counters": {
             "files_copied": files_copied,
@@ -61,11 +78,20 @@ def write_manifest(
         "categories": categories,
     }
 
+    if source_sha256:
+        manifest["source"]["sha256"] = source_sha256
+
+    if skipped_paths:
+        manifest["skipped"] = list(skipped_paths)
+
     if include_sha256_index:
-        manifest["sha256_index"] = {
-            k: v for k, v in compute_sha256_tree(root).items()
-            if k != MANIFEST_NAME
-        }
+        index = sha256_index
+        if index is None:
+            index = {
+                k: v for k, v in compute_sha256_tree(root).items()
+                if k != MANIFEST_NAME
+            }
+        manifest["sha256_index"] = index
 
     target = root / MANIFEST_NAME
     target.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")

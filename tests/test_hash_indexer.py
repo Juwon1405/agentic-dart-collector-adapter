@@ -45,3 +45,26 @@ def test_compute_sha256_tree_rejects_non_directory(tmp_path: Path):
     f.write_text("hi")
     with pytest.raises(NotADirectoryError):
         compute_sha256_tree(f)
+
+
+def test_compute_sha256_refuses_symlink(tmp_path: Path):
+    real = tmp_path / "real.txt"
+    real.write_text("payload")
+    link = tmp_path / "link.txt"
+    link.symlink_to(real)
+    with pytest.raises(ValueError):
+        compute_sha256(link)
+
+
+def test_compute_sha256_tree_skips_symlinks(tmp_path: Path):
+    """Symlinks to files or directories must be ignored, never followed."""
+    (tmp_path / "real.txt").write_text("real")
+    outside = tmp_path.parent / "outside_target.txt"
+    outside.write_text("would-leak")
+    try:
+        (tmp_path / "leak").symlink_to(outside)
+        index = compute_sha256_tree(tmp_path)
+        assert "real.txt" in index
+        assert "leak" not in index
+    finally:
+        outside.unlink(missing_ok=True)

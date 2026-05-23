@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
 # ===========================================================================
-# install.sh
+# fetch-responder-binaries.sh
 #
-# Installs the dart-collector-adapter Python package on the analysis server
-# AND downloads Velociraptor agent binaries for every common (OS, arch) combo
-# into ./bin/velociraptor/ so that responders can ship the right binary
-# to each incident host without leaving the analysis server.
+# Downloads Velociraptor agent binaries for EVERY common (OS, arch) combo
+# into ./bin/velociraptor/ so that responders can ship the right binary to
+# each incident host without leaving the analysis server.
 #
-# This script is intended to run on the analysis server (Linux or macOS).
-# It does NOT install anything on incident hosts.
+# This is the MULTI-PLATFORM fetcher, distinct from scripts/install.sh:
+#   - scripts/install.sh             installs the adapter + ONE Velociraptor
+#                                    binary matching the current host (for
+#                                    the analyst's own machine).
+#   - scripts/fetch-responder-binaries.sh (this file) pulls binaries for ALL
+#                                    platforms so responders can push the
+#                                    correct one to Windows/Linux/macOS
+#                                    incident hosts.
+#
+# Run this on the analysis server (Linux or macOS). It does NOT install
+# anything on incident hosts; it only stages binaries for distribution.
 #
 # Usage:
 #   ./install.sh                       # full setup

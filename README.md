@@ -109,30 +109,41 @@ single commercial vendor's collection format.
 
 ## Install
 
-The analysis server runs on Linux or macOS. `install.sh` does two things in one pass:
+The analysis server runs on Linux or macOS. There are two install scripts,
+for two different jobs:
 
-1. Installs the Python adapter (`dart-collector-adapter`).
-2. Downloads Velociraptor agent binaries for every common OS / arch combo into `./bin/velociraptor/`, so responders can ship the right binary to any incident host without leaving the server.
+**`scripts/install.sh`** — set up the adapter on *this* analyst machine.
+Installs the Python adapter (`dart-collector-adapter`) and downloads the one
+Velociraptor binary that matches the current host's OS/arch, verifying it
+against the upstream `sha256sums` manifest.
 
 ```bash
 git clone https://github.com/Juwon1405/agentic-dart-collector-adapter
 cd agentic-dart-collector-adapter
-./install.sh
+bash scripts/install.sh
 ```
 
-Pin a specific Velociraptor version:
+Pin a specific Velociraptor version, choose an install dir, or skip the
+binary entirely:
 
 ```bash
-VELO_VERSION=0.74.0 ./install.sh
+bash scripts/install.sh --version 0.74.0
+bash scripts/install.sh --install-dir /opt/dart/bin
+bash scripts/install.sh --no-velociraptor      # adapter only
 ```
 
-Adapter only (skip the binary downloads):
+**`scripts/fetch-responder-binaries.sh`** — stage Velociraptor binaries for
+*every* common OS/arch into `./bin/velociraptor/`, so responders can ship the
+right binary to any Windows/Linux/macOS incident host without leaving the
+analysis server. Run this only when you need the multi-platform set.
 
 ```bash
-./install.sh --no-velociraptor
+bash scripts/fetch-responder-binaries.sh
+VELO_VERSION=0.74.0 bash scripts/fetch-responder-binaries.sh   # pin version
+bash scripts/fetch-responder-binaries.sh --no-velociraptor     # adapter only
 ```
 
-Manual install of the adapter (no Velociraptor downloads):
+Manual install of just the adapter (no Velociraptor at all):
 
 ```bash
 pip install -e .
@@ -342,7 +353,7 @@ Because forking 100k+ lines of Go to add one Python adapter would be insane.
 
 - Velociraptor releases patches every few weeks. Tracking those in a fork is a full-time job.
 - Adapter design = ~500 LOC of Python. Fork design = thousands of LOC of Go you don't own.
-- This way, responders use **upstream Velociraptor releases** and pin the version via `VELO_VERSION` in `install.sh`. Security patches arrive on day zero.
+- This way, responders use **upstream Velociraptor releases** and pin the version via `VELO_VERSION` (or `--version`) in the install scripts. Security patches arrive on day zero.
 
 ---
 

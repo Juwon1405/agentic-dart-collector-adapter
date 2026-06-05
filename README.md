@@ -321,7 +321,7 @@ Written under `evidence_root/manifest.json`:
   },
   "adapter": {
     "name": "agentic-dart-collector-adapter",
-    "version": "0.2.0"
+    "version": "1.0.0"
   },
   "counters": {
     "files_copied": 174,
@@ -343,7 +343,7 @@ Written under `evidence_root/manifest.json`:
 }
 ```
 
-> Manifest schema bumped to `1.1` in v0.2.0: added `source.sha256` (input-ZIP anchor) and `skipped` (audit trail).
+> Manifest schema is at `1.1`: `source.sha256` (input-ZIP anchor) and `skipped` (audit trail) are included alongside the file index.
 
 ---
 
@@ -363,11 +363,10 @@ Because forking 100k+ lines of Go to add one Python adapter would be insane.
 
 | Phase     | Status   | Scope                                                                                            |
 |-----------|----------|--------------------------------------------------------------------------------------------------|
-| **v0.1**  | done     | Velociraptor ZIP → evidence_root with SHA-256 manifest. Full test suite passing on Linux+macOS × py3.10/11/12. |
-| **v0.2**  | current  | Hardened integrity (input-ZIP SHA-256 anchor, persisted skip log, overwrite-safe), ZIP-bomb + symlink defenses, single-pass hashing, mtime preservation, install-time binary checksum verification. |
-| **v0.3**  | next     | Sidecar generation — auto-invoke `PECmd`, `AmcacheParser`, `EvtxECmd` when present locally.       |
-| **v0.4**  | later    | Ingest Velociraptor `results/*.json` (parsed-artifact JSON) and merge into the manifest.          |
-| **v0.5**  | later    | macOS + Linux artifact coverage parity with Windows.                                              |
+| **v1.0**  | current  | Velociraptor ZIP → evidence_root with SHA-256 manifest 1.1; hardened integrity (input-ZIP SHA-256 anchor, persisted skip log, overwrite-safe), ZIP-bomb + symlink defenses, single-pass hashing, mtime preservation, install-time binary checksum verification. Full test suite passing on Linux+macOS × py3.10/11/12. |
+| **v1.1**  | next     | Sidecar generation — auto-invoke `PECmd`, `AmcacheParser`, `EvtxECmd` when present locally.       |
+| **v1.2**  | later    | Ingest Velociraptor `results/*.json` (parsed-artifact JSON) and merge into the manifest.          |
+| **v1.3**  | later    | macOS + Linux artifact coverage parity with Windows.                                              |
 
 The adapter is intentionally narrow. It will not grow into a "platform."
 

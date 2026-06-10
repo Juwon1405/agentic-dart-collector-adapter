@@ -6,6 +6,22 @@ release line.
 
 ## [1.0.1] — 2026-06-10 — Collision-safe manifest provenance
 
+### Added
+- Module entrypoint `python3 -m dart_collector_adapter` (`__main__.py`).
+- `--source {zip,image}` contract. `zip` keeps the original offline-collector
+  behaviour; `image` accepts a raw forensic disk image (`.dd`/`.raw`/`.E01`)
+  and runs a documented Velociraptor dead-disk remapping → collection ZIP →
+  the existing `layout.py`/`manifest.py` extraction, producing the same
+  `evidence_root/manifest.json`.
+- Velociraptor binary resolution order for `--source image`:
+  `--velociraptor-bin` → `DART_VELOCIRAPTOR_BIN` → staged `./bin/` → `PATH`,
+  with a fail-fast actionable error when none resolves.
+- `--keep-temp` and `--artifact` flags for the image path; intermediate files
+  are otherwise removed after each run.
+- Mocked end-to-end tests for the image path (image → collection ZIP →
+  `manifest.json`), binary-resolution order, and failure exit codes. The image
+  path has not been exercised against a live Velociraptor binary in CI.
+
 ### Fixed
 - Prevented flat-layout filename collisions from silently overwriting earlier
   output files when multiple Velociraptor ZIP members share a basename such as

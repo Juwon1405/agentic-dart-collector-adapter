@@ -181,12 +181,48 @@ Copy `evidence.zip` back to the analysis server.
 
 ### 2. On the analysis server — adapt
 
+The adapter accepts two source kinds via `--source`:
+
+| `--source` | Input | Pipeline |
+| ---------- | ----- | -------- |
+| `zip` (default) | Velociraptor offline-collector ZIP | direct extraction into `evidence_root/` |
+| `image` | Raw forensic disk image (`.dd`/`.raw`/`.E01`) | Velociraptor dead-disk remapping → collection ZIP → same extraction |
+
 ```bash
-dart-collector-adapter \
+# (a) offline-collector ZIP — the default
+python3 -m dart_collector_adapter --source zip \
     --input /tmp/evidence.zip \
     --output /evidence/case-2026-001/ \
     --case-id case-2026-001
 ```
+
+```bash
+# (b) raw disk image — Velociraptor processes the image, the adapter
+#     converts the resulting collection into the same evidence_root layout
+python3 -m dart_collector_adapter --source image \
+    --input /evidence/disk.E01 \
+    --output /evidence/case-2026-001/ \
+    --case-id case-2026-001 \
+    --velociraptor-bin ./bin/velociraptor   # optional; see resolution order
+```
+
+**Velociraptor binary resolution** (`--source image`), first hit wins:
+`--velociraptor-bin` → `DART_VELOCIRAPTOR_BIN` → staged `./bin/` →
+`velociraptor` on `PATH`. If none resolves, the run fails fast with an
+actionable message and a non-zero exit code (it never pretends the image was
+processed).
+
+**Image-source limitation (read this).** Velociraptor does not ingest a raw
+image directly; the `image` path generates a documented *remapping* config
+that exposes the image to Velociraptor's NTFS accessor, then runs an ordinary
+`artifacts collect`. The exact artifact name and accessor flags are
+release-specific — verify them against your Velociraptor version, or override
+with `--artifact`. Intermediate files live in a temp directory that is removed
+after the run unless `--keep-temp` is given. If dead-disk remapping is
+unsupported on your build, prepare the collection ZIP yourself and use
+`--source zip` instead. This path is covered by mocked end-to-end tests
+(image → collection ZIP → `manifest.json`); it has **not** been exercised
+against a live Velociraptor binary in CI.
 
 Output:
 
@@ -210,13 +246,21 @@ Output:
 
 ### 3. Hand off to Agentic-DART
 
+The adapter writes `evidence_root/manifest.json`; Agentic-DART consumes that
+layout. The primary user-facing command on the Agentic-DART side is
+`run_eval.py`, which resolves a case via its own `case-XX/evidence_root/`:
+
 ```bash
-python -m dart_agent run \
-    --evidence /evidence/case-2026-001/ \
-    --playbook senior-analyst-v3.yaml
+# in the agentic-dart repo, after dropping evidence_root/ under a case folder
+python3 run_eval.py --case self-evaluation/case-01
 ```
 
-Agentic-DART picks up the `evidence_root` layout, reads `manifest.json` as the chain-of-custody seed, and writes its own `audit.jsonl` to continue the chain.
+Agentic-DART reads `manifest.json` as the chain-of-custody seed and writes its
+own `audit.jsonl` to continue the chain. The adapter and Agentic-DART are kept
+in **separate repositories** on purpose: collection/normalisation (this repo,
+no API key, no LLM) is independent of analysis (Agentic-DART, LLM-driven), so
+the trust boundary between "what was collected" and "what was concluded" is
+explicit and auditable.
 
 ---
 

@@ -93,9 +93,9 @@ def diagram_arch():
          lines=["Prefetch   Amcache", "Registry   EventLogs",
                 "Browser    WebLogs", "MFT  LNK  Other"])
     _arrow(ax, 47, 33, 51, 33, color=ADAPTER, label="layout", label_offset=1.5)
-    _box(ax, 28, 11, 42, 11, MANIFEST, title="manifest.json  +  SHA-256 index",
+    _box(ax, 28, 11, 42, 11, MANIFEST, title="manifest 1.2  +  SHA-256 index",
          lines=["chain-of-custody seed",
-                "case_id  ·  source  ·  adapter version",
+                "case_id  ·  source  ·  source_members",
                 "consumed by Agentic-DART as audit entry 0"])
     _arrow(ax, 37, 26, 37, 22, color=MANIFEST)
     _arrow(ax, 60, 26, 60, 22, color=MANIFEST)
@@ -139,9 +139,9 @@ def diagram_roadmap():
             ha="center", va="top", fontsize=15, fontweight="bold", color=TEXT_PRI)
 
     phases = [
-        ("v1.0", "current",
+        ("v1.0.1", "current",
          ["Velociraptor ZIP", "  to evidence_root",
-          "SHA-256 manifest 1.1", "hardened · CI green"],
+          "manifest 1.2", "source-member provenance"],
          ADAPTER, True),
         ("v1.1", "next",
          ["sidecar generation", "PECmd · AmcacheParser",

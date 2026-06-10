@@ -203,7 +203,8 @@ Output:
   },
   "files_copied": 174,
   "files_skipped": 0,
-  "output_root": "/evidence/case-2026-001"
+  "output_root": "/evidence/case-2026-001",
+  "source_sha256": "44e8c1..."
 }
 ```
 
@@ -245,6 +246,8 @@ class AdapterResult:
     bytes_copied: int
     categories: dict[str, int]
     skipped_paths: list[str]
+    source_members: dict[str, str]
+    source_sha256: str | None
 ```
 
 ---
@@ -256,7 +259,7 @@ class AdapterResult:
 | 1    | Open the Velociraptor ZIP and iterate every file member.                                              |
 | 2    | Classify each member by name (`.pf` → Prefetch, `Amcache.hve` → Amcache, `*.evtx` → EventLogs, ...).  |
 | 3    | Validate the basename — reject control bytes, traversal characters, and anything that resolves outside the evidence_root. |
-| 4    | Stream-copy into `evidence_root/<Category>/<basename>` (preserves binary content, never modifies).    |
+| 4    | Stream-copy into `evidence_root/<Category>/<basename>` (preserves binary content, never modifies). If two source members collapse to the same flat filename, the later copy receives a short content-independent source-path digest suffix instead of overwriting the earlier one. |
 | 5    | After all files copied, walk the output and SHA-256 every file (1 MiB streaming, no full-file load).  |
 | 6    | Write `manifest.json` last so a half-finished run never looks successful.                             |
 
@@ -273,6 +276,10 @@ The adapter is opinionated about what it *won't* do, to keep its security surfac
 - Existing `evidence_root` with a manifest is not overwritten (use `--overwrite`; when used, known layout subdirectories are cleared first so stale evidence cannot contaminate the new manifest).
 
 Skipped paths are reported in `AdapterResult.skipped_paths` **and** persisted under `skipped` in `manifest.json` for chain-of-custody.
+
+Collision-renamed files are mapped back to their original ZIP member path under
+`manifest.json` -> `source_members`, so downstream tools can preserve provenance
+without giving up the flat `evidence_root` layout.
 
 ---
 
@@ -306,7 +313,7 @@ Written under `evidence_root/manifest.json`:
 
 ```json
 {
-  "manifest_version": "1.1",
+  "manifest_version": "1.2",
   "case_id": "case-2026-001",
   "generated_at": "2026-05-13T15:00:00+00:00",
   "source": {
@@ -321,7 +328,7 @@ Written under `evidence_root/manifest.json`:
   },
   "adapter": {
     "name": "agentic-dart-collector-adapter",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "counters": {
     "files_copied": 174,
@@ -336,14 +343,23 @@ Written under `evidence_root/manifest.json`:
     "browser": 4
   },
   "skipped": [],
+  "source_members": {
+    "Prefetch/SVCHOST.EXE-ABC.pf": "uploads/auto/C:/Windows/Prefetch/SVCHOST.EXE-ABC.pf",
+    "Browser/History": "uploads/auto/C:/Users/alice/AppData/Local/Google/Chrome/User Data/Default/History",
+    "Browser/History-7e9a1c2d3b4f": "uploads/auto/C:/Users/bob/AppData/Local/Google/Chrome/User Data/Default/History"
+  },
   "sha256_index": {
     "Prefetch/SVCHOST.EXE-ABC.pf": "9d7f...",
-    "Amcache/Amcache.hve": "3c8e..."
+    "Amcache/Amcache.hve": "3c8e...",
+    "Browser/History": "8d41...",
+    "Browser/History-7e9a1c2d3b4f": "b7a0..."
   }
 }
 ```
 
-> Manifest schema is at `1.1`: `source.sha256` (input-ZIP anchor) and `skipped` (audit trail) are included alongside the file index.
+> Manifest schema is at `1.2`: `source.sha256` anchors the input ZIP,
+> `skipped` records refused inputs, and `source_members` preserves provenance
+> for flattened or collision-renamed output files alongside the SHA-256 index.
 
 ---
 
@@ -363,7 +379,7 @@ Because forking 100k+ lines of Go to add one Python adapter would be insane.
 
 | Phase     | Status   | Scope                                                                                            |
 |-----------|----------|--------------------------------------------------------------------------------------------------|
-| **v1.0**  | current  | Velociraptor ZIP → evidence_root with SHA-256 manifest 1.1; hardened integrity (input-ZIP SHA-256 anchor, persisted skip log, overwrite-safe), ZIP-bomb + symlink defenses, single-pass hashing, mtime preservation, install-time binary checksum verification. Full test suite passing on Linux+macOS × py3.10/11/12. |
+| **v1.0.1** | current  | Velociraptor ZIP → evidence_root with SHA-256 manifest 1.2; hardened integrity (input-ZIP SHA-256 anchor, persisted skip log, collision-safe source-member provenance, overwrite-safe), ZIP-bomb + symlink defenses, single-pass hashing, mtime preservation, install-time binary checksum verification. Full test suite passing locally on Python 3.11. |
 | **v1.1**  | next     | Sidecar generation — auto-invoke `PECmd`, `AmcacheParser`, `EvtxECmd` when present locally.       |
 | **v1.2**  | later    | Ingest Velociraptor `results/*.json` (parsed-artifact JSON) and merge into the manifest.          |
 | **v1.3**  | later    | macOS + Linux artifact coverage parity with Windows.                                              |

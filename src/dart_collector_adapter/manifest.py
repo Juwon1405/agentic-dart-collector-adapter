@@ -7,6 +7,7 @@ The manifest is the chain-of-custody seed for Agentic-DART:
 - sha256_index lets downstream tools verify integrity without re-reading the ZIP
 - source.sha256 anchors the input ZIP's identity so the chain survives rename
 - skipped records what the adapter refused, with the reason
+- source_members maps each output file back to its original ZIP member path
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ from pathlib import Path
 from .hash_indexer import compute_sha256_tree
 
 MANIFEST_NAME = "manifest.json"
-MANIFEST_VERSION = "1.1"
+MANIFEST_VERSION = "1.2"
 
 
 def write_manifest(
@@ -33,6 +34,7 @@ def write_manifest(
     include_sha256_index: bool = True,
     source_sha256: str | None = None,
     sha256_index: dict[str, str] | None = None,
+    source_members: dict[str, str] | None = None,
     skipped_paths: list[str] | None = None,
     adapter_version: str | None = None,
 ) -> Path:
@@ -45,6 +47,8 @@ def write_manifest(
         include_sha256_index is True, the output tree is walked.
     source_sha256 : SHA-256 of the input collector ZIP (chain-of-custody anchor).
     skipped_paths : list of "<member>  (<reason>)" strings recorded by the adapter.
+    source_members : {output_relative_path: original_zip_member_name}. This preserves
+        provenance when flat layout collision handling renames an output file.
     adapter_version : injected to avoid an import-time cycle.
     """
     root = Path(evidence_root).resolve()
@@ -83,6 +87,9 @@ def write_manifest(
 
     if skipped_paths:
         manifest["skipped"] = list(skipped_paths)
+
+    if source_members is not None:
+        manifest["source_members"] = dict(sorted(source_members.items()))
 
     if include_sha256_index:
         index = sha256_index

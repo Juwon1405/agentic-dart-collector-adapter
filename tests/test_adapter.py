@@ -44,12 +44,12 @@ def test_adapt_produces_expected_layout(velo_zip: Path, tmp_path: Path):
 
 def test_manifest_has_required_fields(velo_zip: Path, tmp_path: Path):
     out = tmp_path / "evidence_root"
-    adapt(velo_zip, out, case_id="case-manifest")
+    result = adapt(velo_zip, out, case_id="case-manifest")
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
 
     for k in ("manifest_version", "case_id", "generated_at",
               "source", "host", "adapter", "counters",
-              "categories", "sha256_index"):
+              "categories", "sha256_index", "source_members"):
         assert k in manifest, f"missing manifest field: {k}"
 
     assert manifest["case_id"] == "case-manifest"
@@ -58,6 +58,12 @@ def test_manifest_has_required_fields(velo_zip: Path, tmp_path: Path):
     assert manifest["categories"]["amcache"] == 1
     # SHA-256 index covers every output file
     assert "Prefetch/SVCHOST.EXE-ABC.pf" in manifest["sha256_index"]
+    assert manifest["source_members"]["Prefetch/SVCHOST.EXE-ABC.pf"].endswith(
+        "SVCHOST.EXE-ABC.pf"
+    )
+    assert result.source_members["Prefetch/SVCHOST.EXE-ABC.pf"].endswith(
+        "SVCHOST.EXE-ABC.pf"
+    )
 
 
 def test_adapt_refuses_overwrite_by_default(velo_zip: Path, tmp_path: Path):
@@ -145,6 +151,34 @@ def test_overwrite_clears_stale_files(velo_zip: Path, tmp_path: Path):
     assert manifest["counters"]["files_copied"] == len(manifest["sha256_index"])
     assert "Prefetch/NOTEPAD.EXE-NEW.pf" in manifest["sha256_index"]
     assert "Prefetch/SVCHOST.EXE-ABC.pf" not in manifest["sha256_index"]
+
+
+def test_duplicate_basenames_are_not_silently_overwritten(tmp_path: Path):
+    z = tmp_path / "duplicate-history.zip"
+    with zipfile.ZipFile(z, "w") as zf:
+        zf.writestr(
+            "uploads/auto/C:/Users/alice/AppData/Local/Google/Chrome/User Data/Default/History",
+            b"alice",
+        )
+        zf.writestr(
+            "uploads/auto/C:/Users/bob/AppData/Local/Google/Chrome/User Data/Default/History",
+            b"bob",
+        )
+
+    out = tmp_path / "out"
+    result = adapt(z, out, case_id="case-dup")
+    manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    browser_files = sorted(p.name for p in (out / "Browser").iterdir())
+
+    assert result.files_copied == 2
+    assert len(browser_files) == 2
+    assert "History" in browser_files
+    assert (out / "Browser" / "History").read_bytes() == b"alice"
+    assert any(name.startswith("History-") for name in browser_files)
+    assert len(result.source_members) == 2
+    assert len(manifest["sha256_index"]) == 2
+    assert len(manifest["source_members"]) == 2
+    assert any("Users/bob" in member for member in manifest["source_members"].values())
 
 
 def test_symlink_member_is_skipped(tmp_path: Path):

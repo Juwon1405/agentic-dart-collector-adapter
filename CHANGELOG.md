@@ -4,6 +4,21 @@ All notable changes to **agentic-dart-collector-adapter** are documented here.
 The adapter follows the [Agentic-DART](https://github.com/Juwon1405/agentic-dart)
 release line.
 
+## [1.0.1] — 2026-06-10 — Collision-safe manifest provenance
+
+### Fixed
+- Prevented flat-layout filename collisions from silently overwriting earlier
+  output files when multiple Velociraptor ZIP members share a basename such as
+  `History`, `SYSTEM`, or `access.log`.
+- Added deterministic digest suffixing for colliding output paths while keeping
+  the public `evidence_root/<Category>/<basename>` layout.
+
+### Changed
+- Bumped `manifest.json` schema to `1.2` with `source_members`, a map from each
+  output-relative path back to the original ZIP member path.
+- Updated package metadata to the stable classifier and version `1.0.1`.
+- Regenerated README and roadmap diagrams around manifest `1.2`.
+
 ## [1.0.0] — 2026-06-05 — First stable release
 
 First stable release, aligned with Agentic-DART v1.0.0. The adapter's core job —

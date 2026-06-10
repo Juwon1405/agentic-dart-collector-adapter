@@ -72,6 +72,7 @@ class AdapterResult:
     bytes_copied: int = 0
     categories: dict[str, int] = field(default_factory=dict)
     skipped_paths: list[str] = field(default_factory=list)
+    source_members: dict[str, str] = field(default_factory=dict)
     source_sha256: str | None = None
 
 
@@ -163,6 +164,7 @@ def adapt(
             if target is None:
                 _skip(result, info.filename, "would escape evidence_root")
                 continue
+            target = _avoid_target_collision(target, dst, info.filename)
 
             target.parent.mkdir(parents=True, exist_ok=True)
             remaining_total = max_total_bytes - result.bytes_copied
@@ -191,6 +193,7 @@ def adapt(
 
             rel = target.relative_to(dst).as_posix()
             sha256_index[rel] = sha
+            result.source_members[rel] = info.filename
 
             result.files_copied += 1
             result.bytes_copied += written
@@ -210,6 +213,7 @@ def adapt(
         skipped_paths=result.skipped_paths,
         include_sha256_index=include_sha256_index,
         sha256_index=dict(sorted(sha256_index.items())) if include_sha256_index else None,
+        source_members=dict(sorted(result.source_members.items())),
     )
 
     return result
@@ -269,6 +273,34 @@ def _apply_member_mtime(target: Path, info: zipfile.ZipInfo) -> None:
         os.utime(target, (ts, ts))
     except (OverflowError, OSError, ValueError):
         pass
+
+
+def _avoid_target_collision(target: Path, evidence_root: Path, member_name: str) -> Path:
+    """
+    Keep the public evidence_root layout flat, but never let two source
+    members silently overwrite each other. Common forensic filenames such as
+    History, SYSTEM, access.log, and ConsoleHost_history.txt can appear once
+    per user/profile/host in a Velociraptor ZIP.
+    """
+    if not target.exists():
+        return target
+
+    digest = hashlib.sha256(member_name.encode("utf-8", errors="surrogatepass")).hexdigest()[:12]
+    stem = target.stem or target.name
+    suffix = target.suffix
+    parent = target.parent
+    candidate = parent / f"{stem}-{digest}{suffix}"
+    counter = 2
+    while candidate.exists():
+        candidate = parent / f"{stem}-{digest}-{counter}{suffix}"
+        counter += 1
+
+    root_resolved = evidence_root.resolve()
+    try:
+        candidate.resolve().relative_to(root_resolved)
+    except ValueError as e:
+        raise RuntimeError(f"collision target escaped evidence_root: {candidate}") from e
+    return candidate
 
 
 def _safe_target_path(evidence_root: Path, member_name: str) -> Path | None:

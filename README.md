@@ -247,13 +247,16 @@ Output:
 ### 3. Hand off to Agentic-DART
 
 The adapter writes `evidence_root/manifest.json`; Agentic-DART consumes that
-layout. The primary user-facing command on the Agentic-DART side is
-`run_eval.py`, which resolves a case via its own `case-XX/evidence_root/`:
+layout. For a real investigation, point its `run_eval.py` at the
+`evidence_root/` this adapter produced:
 
 ```bash
-# in the agentic-dart repo, after dropping evidence_root/ under a case folder
-python3 run_eval.py --case self-evaluation/case-01
+# in the agentic-dart repo, after authenticating (export ANTHROPIC_API_KEY=...)
+python3 run_eval.py --evidence /evidence/case-2026-001/ --case-id case-2026-001 --max-iterations 25
 ```
+
+(`run_eval.py --case <tier>/case-NN` is for the repo's bundled benchmark
+cases; `--evidence <path>` is the real-evidence entry point.)
 
 Agentic-DART reads `manifest.json` as the chain-of-custody seed and writes its
 own `audit.jsonl` to continue the chain. The adapter and Agentic-DART are kept

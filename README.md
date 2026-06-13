@@ -244,6 +244,30 @@ Output:
 }
 ```
 
+### CLI flags and exit codes
+
+Beyond the source/input/output flags shown above, the adapter accepts:
+
+- `--overwrite` — replace an existing `manifest.json` (known layout
+  subdirectories are cleared first so stale evidence cannot contaminate the
+  new manifest).
+- `--no-hash-index` — skip the per-file SHA-256 index in `manifest.json`
+  (faster, but downstream integrity verification is weaker).
+- `--quiet` / `-q` — suppress the JSON summary on stdout.
+- `--keep-temp` — (`--source image` only) retain the intermediate temp dir.
+
+Exit codes are stable and scriptable:
+
+| Code | Meaning |
+|------|---------|
+| `0` | success |
+| `1` | unexpected error |
+| `2` | input not found |
+| `3` | `manifest.json` already exists (use `--overwrite`) |
+| `4` | malformed ZIP |
+| `5` | Velociraptor binary not found (`--source image`) |
+| `6` | image extraction failed (`--source image`) |
+
 ### 3. Hand off to Agentic-DART
 
 The adapter writes `evidence_root/manifest.json`; Agentic-DART consumes that
@@ -338,17 +362,17 @@ See [`src/dart_collector_adapter/layout.py`](src/dart_collector_adapter/layout.p
 |------------------------------------------------------------|-----------------------|
 | `*.pf`                                                     | `Prefetch/`           |
 | `Amcache.hve`                                              | `Amcache/`            |
-| `SECURITY`, `SAM`, `SOFTWARE`, `SYSTEM`, `NTUSER.DAT`, `UsrClass.dat` | `Registry/`  |
+| `SECURITY`, `SAM`, `SOFTWARE`, `SYSTEM`, `DEFAULT`, `NTUSER.DAT`, `UsrClass.dat`, `Shellbags` | `Registry/`  |
 | `*.evtx`, `*.evt`                                          | `EventLogs/`          |
-| Chrome / Edge / Firefox / Safari / Brave / Opera `History`, Cookies, Cache | `Browser/` |
+| Chrome / Edge / Firefox / Safari / Brave / Opera / Chromium `History`, Cookies, Cache | `Browser/` |
 | `places.sqlite`                                            | `Browser/`            |
 | `$MFT`                                                     | `MFT/`                |
 | `$UsnJrnl`                                                 | `USNJournal/`         |
 | `access*.log`, `nginx/*.log`, `u_ex*.log` (IIS)            | `WebLogs/`            |
-| `auth.log`, `secure`, `wtmp`, `btmp`                       | `AuthLogs/`           |
+| `auth.log`, `secure`, `wtmp`, `btmp`, `lastlog` (+ rotated `.N` / `.gz`) | `AuthLogs/`           |
 | `*.mem`, `*.dmp`, `*.vmem`, `*.raw`                        | `Memory/`             |
 | `*.lnk`                                                    | `LNK/`                |
-| `*.automaticDestinations-ms`                               | `JumpLists/`          |
+| `*.automaticDestinations-ms`, `*.customDestinations-ms`    | `JumpLists/`          |
 | `ConsoleHost_history.txt`                                  | `PowerShell/`         |
 | (everything else)                                          | `Other/`              |
 

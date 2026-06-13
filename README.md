@@ -155,25 +155,32 @@ pip install -e .
 
 ### 1. On the incident host — collect
 
-Ship the matching Velociraptor binary to the host:
+Ship the Velociraptor binary that matches the **incident host's OS/arch**
+(`scripts/fetch-responder-binaries.sh` stages all six under
+`./bin/velociraptor/`). Copy the ONE that matches the host:
 
 ```bash
-# from the analysis server
-scp ./bin/velociraptor/velociraptor-windows-amd64 \
-    responder@incident-host:C:/temp/velociraptor.exe
+# from the analysis server — pick the binary for the host you are collecting from
+# Windows:
+scp ./bin/velociraptor/velociraptor-windows-amd64 responder@host:C:/temp/velociraptor.exe
+# Linux:
+scp ./bin/velociraptor/velociraptor-linux-amd64   responder@host:/tmp/velociraptor
+# macOS (Apple silicon; use velociraptor-darwin-amd64 on Intel Macs):
+scp ./bin/velociraptor/velociraptor-darwin-arm64  responder@host:/tmp/velociraptor
 ```
 
 Run an offline collector on the host (one-time execution, no agent install):
 
 ```cmd
-:: on Windows incident host
+:: on a Windows incident host
 C:\temp\velociraptor.exe -i artifacts collect Windows.KapeFiles.Targets ^
     --output C:\temp\evidence.zip
 ```
 
 ```bash
-# on Linux / macOS incident host
-./velociraptor -i artifacts collect Linux.Search.FileFinder \
+# on a Linux / macOS incident host (chmod once, then run)
+chmod +x /tmp/velociraptor
+/tmp/velociraptor -i artifacts collect Linux.Search.FileFinder \
     --output /tmp/evidence.zip
 ```
 

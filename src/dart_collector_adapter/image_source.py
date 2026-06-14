@@ -96,10 +96,24 @@ def resolve_velociraptor_bin(explicit: str | None = None) -> str:
         checked.append(f"DART_VELOCIRAPTOR_BIN={env}")
 
     bin_dir = _staged_bin_dir()
+    # 1) exact stable names ('velociraptor', 'velociraptor.exe')
     for name in _BINARY_NAMES:
         p = bin_dir / name
         if p.is_file() and os.access(p, os.X_OK):
             return str(p.resolve())
+    # 2) versioned release asset left by the installer
+    #    (e.g. 'velociraptor-v0.76.6-linux-amd64'). The installer also tries to
+    #    drop a stable 'velociraptor' symlink, but if that step was skipped or
+    #    the binary was staged by hand, match the versioned name directly so a
+    #    present-but-versioned binary is never reported as missing.
+    if bin_dir.is_dir():
+        versioned = sorted(
+            (p for p in bin_dir.glob("velociraptor-v*")
+             if p.is_file() and os.access(p, os.X_OK)),
+            reverse=True,  # highest version string first
+        )
+        if versioned:
+            return str(versioned[0].resolve())
     checked.append(f"staged dir {bin_dir}/")
 
     for name in _BINARY_NAMES:

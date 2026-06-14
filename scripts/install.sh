@@ -209,6 +209,28 @@ fi
 
 chmod +x "$BINARY_PATH"
 ok "Velociraptor ready: $BINARY_PATH"
+
+# Create a version-agnostic 'velociraptor' name next to the versioned binary.
+# The downloaded asset is named e.g. velociraptor-v0.76.6-linux-amd64, but the
+# adapter's resolver (image_source.py: _BINARY_NAMES) looks for a plain
+# 'velociraptor' in the staged bin dir. Without this link, the binary is
+# present but invisible to --source image, which is exactly the failure mode
+# this whole installer exists to prevent. Prefer a symlink; fall back to a
+# copy on filesystems that do not support symlinks.
+STABLE_BIN="$INSTALL_DIR/velociraptor"
+if [[ "$(realpath "$BINARY_PATH")" != "$(realpath "$STABLE_BIN" 2>/dev/null || echo /nonexistent)" ]]; then
+  rm -f "$STABLE_BIN"
+  if ln -s "$(basename "$BINARY_PATH")" "$STABLE_BIN" 2>/dev/null; then
+    ok "Linked $STABLE_BIN -> $(basename "$BINARY_PATH")"
+  elif cp "$BINARY_PATH" "$STABLE_BIN" 2>/dev/null; then
+    chmod +x "$STABLE_BIN"
+    ok "Copied $BINARY_PATH -> $STABLE_BIN (symlink unsupported here)"
+  else
+    warn "Could not create a plain 'velociraptor' name at $STABLE_BIN;"
+    warn "--source image may not find the binary. Set DART_VELOCIRAPTOR_BIN=$BINARY_PATH"
+  fi
+fi
+
 log "Add to PATH (suggested):"
 echo "  export PATH=\"\$(realpath $INSTALL_DIR):\$PATH\""
 log "Done."

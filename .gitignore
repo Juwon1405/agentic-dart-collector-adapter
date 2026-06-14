@@ -57,5 +57,5 @@ output/
 *.tar
 *.gz
 
-# 로컬 작업 지침 (Claude Code 전용, 원격 비공개)
+# Local working notes — kept off the remote
 CLAUDE.local.md

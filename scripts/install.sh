@@ -138,21 +138,47 @@ ok "Downloaded to $BINARY_PATH"
 if [[ "$SKIP_CHECKSUM" == "true" ]]; then
   warn "Skipping SHA-256 verification (--skip-checksum). You are trusting the download channel."
 else
-  log "Verifying SHA-256 against upstream sha256sums..."
+  log "Verifying SHA-256 (trying upstream sha256sums first, then GitHub API)..."
   SUMS_PATH="$INSTALL_DIR/.sha256sums"
-  curl -sL --fail "$RELEASE_URL/sha256sums" -o "$SUMS_PATH" 2>/dev/null || \
-    curl -sL --fail "$RELEASE_URL/sha256sums.txt" -o "$SUMS_PATH" 2>/dev/null || {
-    err "Could not download sha256sums manifest from $RELEASE_URL"
-    err "Velociraptor may have changed its release-asset naming; please file an issue."
-    err "If you must proceed without checksum verification, re-run with --skip-checksum."
-    rm -f "$BINARY_PATH"
-    exit 2
-  }
+  EXPECTED=""
 
-  EXPECTED="$(grep -E "[[:space:]]+\*?${ASSET}\$" "$SUMS_PATH" | awk '{print $1}' | head -1)"
+  # Strategy 1: legacy sha256sums manifest (pre-2026 releases shipped this).
+  if curl -sL --fail "$RELEASE_URL/sha256sums" -o "$SUMS_PATH" 2>/dev/null \
+     || curl -sL --fail "$RELEASE_URL/sha256sums.txt" -o "$SUMS_PATH" 2>/dev/null; then
+    EXPECTED="$(grep -E "[[:space:]]+\*?${ASSET}\$" "$SUMS_PATH" | awk '{print $1}' | head -1)"
+    [[ -n "$EXPECTED" ]] && log "  source: upstream sha256sums manifest"
+  fi
+
+  # Strategy 2: GitHub API asset digest (modern Velociraptor releases stopped
+  # shipping sha256sums and only sign with GPG .sig files; GitHub still records
+  # each asset's SHA-256 as the digest field in the release API. This is the
+  # authoritative source as long as you trust GitHub's TLS / their release
+  # storage, which is the same trust boundary as the download itself).
   if [[ -z "$EXPECTED" ]]; then
-    err "No SHA-256 entry for $ASSET in sha256sums manifest."
-    err "Refusing to proceed with unverified binary."
+    log "  upstream sha256sums not found; falling back to GitHub API asset digest"
+    EXPECTED="$(curl -sL --fail \
+      "https://api.github.com/repos/Velocidex/velociraptor/releases/tags/v${VELOCIRAPTOR_VERSION}" \
+      2>/dev/null \
+      | python3 -c "
+import json, sys, re
+try:
+    d = json.load(sys.stdin)
+    for a in d.get('assets', []):
+        if a.get('name') == '${ASSET}':
+            m = re.match(r'sha256:([a-f0-9]{64})\$', a.get('digest', ''))
+            if m:
+                print(m.group(1))
+            break
+except Exception:
+    pass
+" 2>/dev/null)"
+    [[ -n "$EXPECTED" ]] && log "  source: GitHub API release asset digest"
+  fi
+
+  if [[ -z "$EXPECTED" ]]; then
+    err "Could not obtain SHA-256 for $ASSET from any source."
+    err "Tried: sha256sums manifest at $RELEASE_URL, GitHub API release digest."
+    err "If you must proceed without checksum verification, re-run with --skip-checksum."
     rm -f "$BINARY_PATH"
     exit 2
   fi
